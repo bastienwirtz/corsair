@@ -19,7 +19,7 @@ import (
 var version = "dev"
 
 func main() {
-	configPath := flag.String("c", "/etc/corsair/config.yaml", "path to configuration file")
+	configPath := flag.String("c", config.DEFAULT_PATH, "path to configuration file")
 	versionFlag := flag.Bool("version", false, "print version information")
 	flag.Parse()
 

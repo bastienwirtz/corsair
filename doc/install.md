@@ -1,13 +1,16 @@
 # Installation
 
-Create the `config.yaml` file base on the [example in this repository](config.yaml). See the [configuration reference](doc/configuration.md) for more information on options. If the `-c` option is not provided, `corsair` will use `/etc/corsair/config.yaml` as default configuration file.
+Create the `config.yaml` file base on the [example in this repository](config.yaml). See the [configuration reference](doc/configuration.md) for more information on options. If the `-c` option is not provided, `corsair` will look for the config file in `/etc/corsair/`.
 
 ### Using Docker
 
 ```console
-git clone https://github.com/bastienwirtz/corsair
-docker build . -t corsair
-docker run [-e MY_ENV='my-value'] -p 8080:8080 corsair
+docker run -d \
+  --name corsair \
+  -p 8080:8080 \
+  --mount type=bind,source="/path/to/config/",target=/etc/corsair \
+  --restart=unless-stopped \
+  b4bz/corsair:latest
 ```
 
 Use `-e` to configure env vars if used in configuration.
@@ -17,12 +20,12 @@ Use `-e` to configure env vars if used in configuration.
 ```yaml
 services:
   corsair:
-    build: .
+    image: b4bz/corsair:latest
     volumes:
-      - /path/to/config/dir:/etc/corsair
+      - /path/to/config/:/etc/corsair
     ports:
       - 8080:8080
-# Optionnal: Configure env vars if used in configuration:
+    # Optionnal: Configure env vars if used in configuration:
     environment: 
       - MY_ENV-ENV=my-value 
     restart: unless-stopped
@@ -32,7 +35,7 @@ services:
 docker compose up -d
 ```
 
-### Local build
+### Build
 
 Build the server.
 

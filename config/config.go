@@ -10,7 +10,10 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-const DEFAULT_TIMEOUT = 10 * time.Second
+const (
+	DEFAULT_TIMEOUT = 10 * time.Second
+	DEFAULT_PATH    = "/etc/corsair/config.yaml"
+)
 
 type Config struct {
 	Server    ServerConfig  `yaml:"server"`
@@ -47,12 +50,19 @@ type Endpoint struct {
 }
 
 func LoadConfig(filename string) (*Config, error) {
+	var config Config
+	var data []byte
+
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		// Allow starting without configuration file.
+		if filename == DEFAULT_PATH && os.IsNotExist(err) {
+			slog.Info("No configuration file found, using defaults")
+		} else {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
 	}
 
-	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
