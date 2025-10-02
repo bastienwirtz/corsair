@@ -37,8 +37,8 @@ func (h *Handler) registerRoutes() {
 
 	// Register forward endpoint if enabled
 	if h.config.Server.ForwardEndpointEnabled != nil && *h.config.Server.ForwardEndpointEnabled {
-		h.mux.Handle("/forward", corsMiddleware(handlers.ForwardHandler(h.config)))
-		slog.Info("Forward endpoint enabled", "path", "/forward")
+		h.mux.Handle("/forward/", corsMiddleware(handlers.ForwardHandler(h.config)))
+		slog.Info("Forward endpoint enabled", "path", "/forward/")
 	} else {
 		slog.Info("Forward endpoint disabled")
 	}
@@ -80,9 +80,9 @@ func (h *Handler) registerRoutes() {
 		registeredCount++
 	}
 
-	slog.Info("Route registration complete", 
-		"registered", registeredCount, 
-		"skipped", skippedCount, 
+	slog.Info("Route registration complete",
+		"registered", registeredCount,
+		"skipped", skippedCount,
 		"total_configured", len(h.config.Endpoints))
 }
 
