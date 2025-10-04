@@ -102,6 +102,10 @@ func (c *CORSConfig) WildcardOriginAllowed() bool {
 	return slices.Contains(c.Origins, "*")
 }
 
+func (c *CORSConfig) HasAnyConfiguration() bool {
+	return len(c.Origins) > 0 || c.Methods != "" || c.Headers != "" || c.Credentials
+}
+
 func validateCORSConfig(corsConfig *CORSConfig) error {
 	hasWildcard := corsConfig.WildcardOriginAllowed()
 

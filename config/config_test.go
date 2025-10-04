@@ -357,6 +357,93 @@ func TestValidateCORSConfig(t *testing.T) {
 	}
 }
 
+func TestCORSConfigHasAnyConfiguration(t *testing.T) {
+	tests := []struct {
+		name       string
+		corsConfig CORSConfig
+		expected   bool
+	}{
+		{
+			name:       "no configuration",
+			corsConfig: CORSConfig{},
+			expected:   false,
+		},
+		{
+			name: "only origins configured",
+			corsConfig: CORSConfig{
+				Origins: []string{"http://localhost:3000"},
+			},
+			expected: true,
+		},
+		{
+			name: "only methods configured",
+			corsConfig: CORSConfig{
+				Methods: "GET, POST",
+			},
+			expected: true,
+		},
+		{
+			name: "only headers configured",
+			corsConfig: CORSConfig{
+				Headers: "Content-Type",
+			},
+			expected: true,
+		},
+		{
+			name: "only credentials enabled",
+			corsConfig: CORSConfig{
+				Credentials: true,
+			},
+			expected: true,
+		},
+		{
+			name: "empty origins slice",
+			corsConfig: CORSConfig{
+				Origins: []string{},
+			},
+			expected: false,
+		},
+		{
+			name: "empty methods string",
+			corsConfig: CORSConfig{
+				Methods: "",
+			},
+			expected: false,
+		},
+		{
+			name: "empty headers string",
+			corsConfig: CORSConfig{
+				Headers: "",
+			},
+			expected: false,
+		},
+		{
+			name: "credentials false",
+			corsConfig: CORSConfig{
+				Credentials: false,
+			},
+			expected: false,
+		},
+		{
+			name: "multiple configurations",
+			corsConfig: CORSConfig{
+				Origins:     []string{"*"},
+				Methods:     "GET, POST",
+				Headers:     "Content-Type",
+				Credentials: true,
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.corsConfig.HasAnyConfiguration()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestServerAddressConfiguration(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -178,3 +178,138 @@ func TestProxyHandlerUnreachableServer(t *testing.T) {
 	assert.Equal(t, http.StatusBadGateway, w.Code)
 	assert.Contains(t, w.Body.String(), "Request failed")
 }
+
+func TestCORSHeaderFiltering(t *testing.T) {
+	tests := []struct {
+		name               string
+		corsConfig         config.CORSConfig
+		upstreamHeaders    map[string]string
+		expectedToFilter   bool
+		expectedHeaders    []string
+		unexpectedHeaders  []string
+	}{
+		{
+			name: "no CORS config - should pass through all headers",
+			corsConfig: config.CORSConfig{},
+			upstreamHeaders: map[string]string{
+				"Access-Control-Allow-Origin":      "*",
+				"Access-Control-Allow-Methods":     "GET, POST",
+				"Access-Control-Allow-Headers":     "Content-Type",
+				"Access-Control-Allow-Credentials": "true",
+				"Content-Type":                     "application/json",
+			},
+			expectedToFilter: false,
+			expectedHeaders: []string{
+				"Access-Control-Allow-Origin",
+				"Access-Control-Allow-Methods",
+				"Access-Control-Allow-Headers",
+				"Access-Control-Allow-Credentials",
+				"Content-Type",
+			},
+		},
+		{
+			name: "CORS origins configured - should filter CORS headers",
+			corsConfig: config.CORSConfig{
+				Origins: []string{"http://localhost:3000"},
+			},
+			upstreamHeaders: map[string]string{
+				"Access-Control-Allow-Origin":      "*",
+				"Access-Control-Allow-Methods":     "GET, POST",
+				"Access-Control-Allow-Headers":     "Content-Type",
+				"Access-Control-Allow-Credentials": "true",
+				"Content-Type":                     "application/json",
+			},
+			expectedToFilter: true,
+			expectedHeaders: []string{"Content-Type"},
+			unexpectedHeaders: []string{
+				"Access-Control-Allow-Origin",
+				"Access-Control-Allow-Methods",
+				"Access-Control-Allow-Headers",
+				"Access-Control-Allow-Credentials",
+			},
+		},
+		{
+			name: "CORS methods configured - should filter CORS headers",
+			corsConfig: config.CORSConfig{
+				Methods: "GET, POST, PUT",
+			},
+			upstreamHeaders: map[string]string{
+				"Access-Control-Allow-Origin":  "*",
+				"Access-Control-Allow-Methods": "GET, POST",
+				"Content-Type":                 "application/json",
+				"X-Custom-Header":              "value",
+			},
+			expectedToFilter: true,
+			expectedHeaders: []string{"Content-Type", "X-Custom-Header"},
+			unexpectedHeaders: []string{
+				"Access-Control-Allow-Origin",
+				"Access-Control-Allow-Methods",
+			},
+		},
+		{
+			name: "CORS credentials enabled - should filter CORS headers",
+			corsConfig: config.CORSConfig{
+				Credentials: true,
+			},
+			upstreamHeaders: map[string]string{
+				"Access-Control-Allow-Credentials": "false",
+				"Content-Type":                     "application/json",
+			},
+			expectedToFilter: true,
+			expectedHeaders: []string{"Content-Type"},
+			unexpectedHeaders: []string{"Access-Control-Allow-Credentials"},
+		},
+		{
+			name: "CORS headers configured - should filter CORS headers",
+			corsConfig: config.CORSConfig{
+				Headers: "Content-Type, Authorization",
+			},
+			upstreamHeaders: map[string]string{
+				"Access-Control-Allow-Headers": "X-Requested-With",
+				"Content-Type":                 "application/json",
+			},
+			expectedToFilter: true,
+			expectedHeaders: []string{"Content-Type"},
+			unexpectedHeaders: []string{"Access-Control-Allow-Headers"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				for key, value := range tt.upstreamHeaders {
+					w.Header().Set(key, value)
+				}
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"status":"ok"}`))
+			}))
+			defer mockServer.Close()
+
+			endpoint := config.Endpoint{
+				Path:      "/test",
+				RemoteURL: mockServer.URL,
+			}
+
+			cfg := config.Config{
+				Server: config.ServerConfig{DefaultTimeout: "10s"},
+				CORS:   tt.corsConfig,
+			}
+
+			handler := ProxyHandler(endpoint, cfg)
+			req := httptest.NewRequest("GET", "/test", nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			for _, expectedHeader := range tt.expectedHeaders {
+				assert.NotEmpty(t, w.Header().Get(expectedHeader), "Expected header %s to be present", expectedHeader)
+			}
+
+			for _, unexpectedHeader := range tt.unexpectedHeaders {
+				assert.Empty(t, w.Header().Get(unexpectedHeader), "Expected header %s to be filtered out", unexpectedHeader)
+			}
+		})
+	}
+}

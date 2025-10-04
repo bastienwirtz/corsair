@@ -64,6 +64,6 @@ func ForwardHandler(cfg config.Config) http.Handler {
 		timeout := cfg.GetDefaultTimeout()
 
 		slog.Info("Forwarding request", "target_url", targetURL.String(), "method", r.Method, "timeout", timeout)
-		executeProxyRequest(proxyReq, w, timeout)
+		executeProxyRequest(proxyReq, w, timeout, cfg.CORS)
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -12,7 +13,15 @@ import (
 )
 
 // executeProxyRequest executes the HTTP request and copies the response back to the client.
-func executeProxyRequest(proxyReq *http.Request, w http.ResponseWriter, timeout time.Duration) {
+func executeProxyRequest(proxyReq *http.Request, w http.ResponseWriter, timeout time.Duration, corsConfig config.CORSConfig) {
+
+	corsHeaders := []string{
+		"access-control-allow-origin",
+		"access-control-allow-methods",
+		"access-control-allow-headers",
+		"access-control-allow-credentials",
+	}
+
 	client := &http.Client{
 		Timeout: timeout,
 	}
@@ -29,8 +38,12 @@ func executeProxyRequest(proxyReq *http.Request, w http.ResponseWriter, timeout 
 
 	logger.Debug("Received response", "status", resp.StatusCode)
 
-	// Forward all response headers to client
+	// Forward response headers to client
 	for key, values := range resp.Header {
+		if corsConfig.HasAnyConfiguration() && slices.Contains(corsHeaders, strings.ToLower(key)) {
+			logger.Warn("Upstream server response includes CORS headers. Dropping them to prevent conflicts with corsair configured CORS headers", "header", key)
+			continue
+		}
 		for _, value := range values {
 			w.Header().Add(key, value)
 		}
@@ -103,6 +116,6 @@ func ProxyHandler(endpoint config.Endpoint, cfg config.Config) http.Handler {
 		proxyReq.Host = targetURL.Host
 
 		timeout := cfg.GetEffectiveTimeout(endpoint)
-		executeProxyRequest(proxyReq, w, timeout)
+		executeProxyRequest(proxyReq, w, timeout, cfg.CORS)
 	})
 }
