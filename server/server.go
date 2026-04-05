@@ -56,11 +56,11 @@ func (h *Handler) registerRoutes() {
 			continue
 		}
 
-		// Ensure path ends with "/" for proper HTTP routing behavior.
+		// Ensure path ends with "/" to be able to handle sub-paths no
+		// matter how the path is configured.
 		// Go's HTTP router treats "/api" and "/api/" differently:
 		// - "/api" matches only exactly "/api"
 		// - "/api/" matches "/api/", "/api/foo", "/api/bar/baz", etc.
-		// This allows our proxy to handle sub-paths correctly.
 		// The trailing slash middleware normalizes incoming requests to
 		// match routes with a ending "/".
 		if !strings.HasSuffix(path, "/") {
