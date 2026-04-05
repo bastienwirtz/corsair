@@ -1,10 +1,10 @@
 module github.com/bastienwirtz/corsair
 
-go 1.25
+go 1.26
 
 require (
-	github.com/goccy/go-yaml v1.18.0
-	github.com/lmittmann/tint v1.1.2
+	github.com/goccy/go-yaml v1.19.2
+	github.com/lmittmann/tint v1.1.3
 	github.com/mattn/go-isatty v0.0.20
 	github.com/stretchr/testify v1.11.1
 )

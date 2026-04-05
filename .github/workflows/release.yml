@@ -20,12 +20,12 @@ jobs:
         run: echo ${VERSION}
       - 
         name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - 
         name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
       - 
         name: Verify dependencies
         run: go mod verify
