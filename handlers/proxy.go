@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bastienwirtz/corsair/config"
+	"github.com/bastienwirtz/corsair/middleware"
 )
 
 // executeProxyRequest executes the HTTP request and copies the response back to the client.
@@ -57,6 +58,13 @@ func executeProxyRequest(proxyReq *http.Request, w http.ResponseWriter, timeout 
 	}
 }
 
+func GetOriginalPath(r *http.Request) string {
+	if v, ok := r.Context().Value(middleware.OriginalPathKey).(string); ok {
+		return v
+	}
+	return r.URL.Path
+}
+
 // ProxyHandler creates an HTTP handler that proxies requests to a configured endpoint.
 func ProxyHandler(endpoint config.Endpoint, cfg config.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +82,7 @@ func ProxyHandler(endpoint config.Endpoint, cfg config.Config) http.Handler {
 		}
 
 		// Strip endpoint path and construct target path
-		path := strings.TrimPrefix(r.URL.Path, endpoint.Path)
+		path := strings.TrimPrefix(GetOriginalPath(r), endpoint.Path)
 		if path == "" || path[0] != '/' {
 			path = "/" + path
 		}
